@@ -292,8 +292,8 @@ class AstrbotPluginCustomize(Star):
 
         bytes = None
         if isinstance(data, str) and data_type != "text":
-            url = self._extract_url(data)
-            if url: bytes = await self._make_request(url)
+            data = self._extract_url(data)
+            if data: bytes = await self._make_request(data)
 
         if bytes is None: return []
 
