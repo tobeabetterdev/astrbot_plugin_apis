@@ -41,8 +41,8 @@ api_file = (
     "astrbot_plugin_apis",
     "tobeabetterdev",
     "API聚合插件，定制化功能整合，个人用",
-    "1.0.0", # version up
-    "https://github.com/tobeabetterdev/astrbot_plugin_apis",
+    "1.0.0",
+    # "https://github.com/tobeabetterdev/astrbot_plugin_apis",
 )
 class ArknightsPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -251,11 +251,22 @@ class ArknightsPlugin(Star):
 
     async def _prepare_params(self, event: AstrMessageEvent, args: list, params: dict) -> dict:
         """准备API请求参数"""
-        final_args = args or await self._supplement_args(event)
-        return {
-            key: final_args[i] if i < len(final_args) else val
-            for i, (key, val) in enumerate(params.items())
-        }
+        update_params = dict(params)  # Start with default params
+
+        # If user provided arguments, they override defaults in order
+        if args:
+            for i, key in enumerate(update_params.keys()):
+                if i < len(args):
+                    update_params[key] = args[i]
+            return update_params
+
+        # If no user args, supplement only for params that are placeholders (empty/None)
+        supplemented_args = await self._supplement_args(event)
+        for i, (key, val) in enumerate(params.items()):
+            if val in [None, ""] and i < len(supplemented_args):
+                update_params[key] = supplemented_args[i]
+
+        return update_params
 
     async def _supplement_args(self, event: AstrMessageEvent) -> list:
         """从上下文补充参数"""
@@ -301,9 +312,9 @@ class ArknightsPlugin(Star):
             if data_type == "video": return [Comp.Video.fromFileSystem(data)]
             if data_type == "audio": return [Comp.Record.fromFileSystem(data)]
         elif isinstance(data, bytes): # 网络数据是字节
-            if data_type == "image": return [Comp.Image.from_bytes(data)]
-            if data_type == "video": return [Comp.Video.from_bytes(data)]
-            if data_type == "audio": return [Comp.Record.from_bytes(data)]
+            if data_type == "image": return [Comp.Image.fromBytes(data)]
+            if data_type == "video": return [Comp.Video.fromBytes(data)]
+            if data_type == "audio": return [Comp.Record.fromBytes(data)]
         return []
 
     def _get_nested_value(self, result: dict, target: str) -> Any:
