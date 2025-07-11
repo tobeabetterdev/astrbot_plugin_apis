@@ -39,10 +39,10 @@ api_file = (
 
 @register(
     "astrbot_plugin_apis",
-    "Zhalslar",
-    "API聚合插件，海量免费API动态添加，热门API：看看腿、看看腹肌...",
-    "1.1.0", # version up
-    "https://github.com/Zhalslar/astrbot_plugin_apis",
+    "tobeabetterdev",
+    "API聚合插件，定制化功能整合，个人用",
+    "1.0.0", # version up
+    "https://github.com/tobeabetterdev/astrbot_plugin_apis",
 )
 class ArknightsPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
