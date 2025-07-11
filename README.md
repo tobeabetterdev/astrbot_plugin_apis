@@ -1,6 +1,6 @@
-# astrbot_plugin_apis
+# astrbot_plugin_customize
 
-这是一个为 [AstrBot](https://github.com/Soulter/AstrBot) 设计的API聚合插件，其灵感和实现参考了 [astrbot_plugin_apis](https://github.com/Zhalslar/astrbot_plugin_apis)。
+这是一个为 [AstrBot](https://github.com/Soulter/AstrBot) 设计的API聚合插件，其灵感和实现参考了 [astrbot_plugin_customize](https://github.com/Zhalslar/astrbot_plugin_customize)。
 
 ## 💡 功能
 
@@ -11,7 +11,7 @@
 
 ## 📦 安装
 
-1.  将插件文件夹 `astrbot_plugin_apis` 放入 AstrBot 的 `data/plugins` 目录下。
+1.  将插件文件夹 `astrbot_plugin_customize` 放入 AstrBot 的 `data/plugins` 目录下。
 2.  重启 AstrBot。
 
 ## ⌨️ 指令说明
@@ -26,7 +26,7 @@
 
 ## ⚙️ 配置
 
-插件的配置可以在 AstrBot 的管理面板中找到：`插件管理 -> astrbot_plugin_apis -> 操作 -> 插件配置`。
+插件的配置可以在 AstrBot 的管理面板中找到：`插件管理 -> astrbot_plugin_customize -> 操作 -> 插件配置`。
 
 可配置项：
 *   **API请求超时**: 设置API请求的超时时间（秒）。
@@ -34,4 +34,4 @@
 
 ## 🤝 致谢
 
-感谢 [Zhalslar](https://github.com/Zhalslar) 开发的 `astrbot_plugin_apis` 插件，为本项目提供了宝贵的参考。
+感谢 [Zhalslar](https://github.com/Zhalslar) 开发的 `astrbot_plugin_customize` 插件，为本项目提供了宝贵的参考。

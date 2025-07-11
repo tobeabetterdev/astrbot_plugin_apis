@@ -1,5 +1,5 @@
-name: astrbot_plugin_apis
-desc: API聚合插件，定制化功能整合，个人用
+name: astrbot_plugin_customize
+desc: astrbot自定义插件集合，自用
 version: 1.0.0
 author: tobeabetterdev
-# repo: https://github.com/tobeabetterdev/astrbot_plugin_apis
+repo: https://github.com/tobeabetterdev/astrbot_plugin_customize

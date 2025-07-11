@@ -18,10 +18,10 @@ from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.message.components import BaseMessageComponent
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
-from data.plugins.astrbot_plugin_apis.api_manager import APIManager
+from data.plugins.astrbot_plugin_customize.api_manager import APIManager
 
 # 定义缓存路径
-DATA_PATH = Path("./data/plugins_data/astrbot_plugin_apis")
+DATA_PATH = Path("./data/plugins_data/astrbot_plugin_customize")
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 # 定义子路径
@@ -38,13 +38,13 @@ api_file = (
 
 
 @register(
-    "astrbot_plugin_apis",
+    "astrbot_plugin_customize",
     "tobeabetterdev",
     "API聚合插件，定制化功能整合，个人用",
     "1.0.0",
-    # "https://github.com/tobeabetterdev/astrbot_plugin_apis",
+    "https://github.com/tobeabetterdev/astrbot_plugin_customize",
 )
-class AstrbotPluginApis(Star):
+class AstrbotPluginCustomize(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.load_config(config)
