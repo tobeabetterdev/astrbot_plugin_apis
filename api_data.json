@@ -1,0 +1,51 @@
+{
+    "摸鱼日历": {
+        "name": "摸鱼日历",
+        "url": "https://dayu.qqsuu.cn/moyurili/apis.php",
+        "type": "image"
+    },
+    "摸鱼日报": {
+        "name": "摸鱼日报",
+        "url": "https://dayu.qqsuu.cn/moyuribao/apis.php",
+        "type": "image"
+    },
+    "摸鱼日报2": {
+        "name": "摸鱼日报2",
+        "url": "https://api.52vmy.cn/api/wl/moyu",
+        "type": "image"
+    },
+    "摸鱼日报3": {
+        "name": "摸鱼日报3",
+        "url": "https://api.dwo.cc/api/himg",
+        "type": "image"
+    },
+    "日报": {
+        "name": "日报",
+        "url": "https://dayu.qqsuu.cn/weiyujianbao/apis.php",
+        "type": "image"
+    },
+    "日报2": {
+        "name": "日报2",
+        "url": "https://api.suxun.site/api/sixs",
+        "type": "image"
+    },
+    "日报3": {
+        "name": "日报3",
+        "url": "https://api.52vmy.cn/api/wl/60s",
+        "type": "image"
+    },
+    "kfc": {
+        "name": "kfc",
+        "url": "https://www.hhlqilongzhu.cn/api/yl_kfc.php",
+        "type": "text"
+    },
+    "每日英语": {
+        "name": "每日英语",
+        "url": "https://api.tangdouz.com/a/perday.php",
+        "type": "audio",
+        "params": {
+            "return": "json"
+        },
+        "target": "tts"
+    }
+}
