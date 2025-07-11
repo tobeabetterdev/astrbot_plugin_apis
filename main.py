@@ -44,7 +44,7 @@ api_file = (
     "1.0.0",
     # "https://github.com/tobeabetterdev/astrbot_plugin_apis",
 )
-class ArknightsPlugin(Star):
+class AstrbotPluginApis(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.load_config(config)
@@ -298,7 +298,7 @@ class ArknightsPlugin(Star):
         if data is None: return []
 
         if self.auto_save_data:
-            await self._save_data(data, api_name, data_type)
+            self._save_data(data, api_name, data_type)
         
         return self._build_chain(data, data_type)
 
@@ -311,10 +311,10 @@ class ArknightsPlugin(Star):
             if data_type == "image": return [Comp.Image.fromFileSystem(data)]
             if data_type == "video": return [Comp.Video.fromFileSystem(data)]
             if data_type == "audio": return [Comp.Record.fromFileSystem(data)]
-        elif isinstance(data, bytes): # 网络数据是字节
-            if data_type == "image": return [Comp.Image.fromBytes(data)]
-            if data_type == "video": return [Comp.Video.fromBytes(data)]
-            if data_type == "audio": return [Comp.Record.fromBytes(data)]
+        else:
+            if data_type == "image" and isinstance(data, bytes): return [Comp.Image.fromBytes(data)]
+            if data_type == "video" and isinstance(data, str): return [Comp.Video.fromURL(data)]
+            if data_type == "audio" and isinstance(data, str): return [Comp.Record.fromURL(data)]
         return []
 
     def _get_nested_value(self, result: dict, target: str) -> Any:
