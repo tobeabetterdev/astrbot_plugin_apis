@@ -290,15 +290,15 @@ class AstrbotPluginCustomize(Star):
         if isinstance(data, dict) and target:
             data = self._get_nested_value(data, target)
 
+        bytes = None
         if isinstance(data, str) and data_type != "text":
             url = self._extract_url(data)
-            if url: data = await self._make_request(url)
-            else: data = None
+            if url: bytes = await self._make_request(url)
 
-        if data is None: return []
+        if bytes is None: return []
 
         if self.auto_save_data:
-            self._save_data(data, api_name, data_type)
+            await self._save_data(bytes, api_name, data_type)
         
         return self._build_chain(data, data_type)
 
@@ -311,10 +311,10 @@ class AstrbotPluginCustomize(Star):
             if data_type == "image": return [Comp.Image.fromFileSystem(data)]
             if data_type == "video": return [Comp.Video.fromFileSystem(data)]
             if data_type == "audio": return [Comp.Record.fromFileSystem(data)]
-        else:
-            if data_type == "image" and isinstance(data, bytes): return [Comp.Image.fromBytes(data)]
-            if data_type == "video" and isinstance(data, str): return [Comp.Video.fromURL(data)]
-            if data_type == "audio" and isinstance(data, str): return [Comp.Record.fromURL(data)]
+        elif isinstance(data, str):
+            if data_type == "image": return [Comp.Image.fromURL(data)]
+            if data_type == "video": return [Comp.Video.fromURL(data)]
+            if data_type == "audio": return [Comp.Record.fromURL(data)]
         return []
 
     def _get_nested_value(self, result: dict, target: str) -> Any:
