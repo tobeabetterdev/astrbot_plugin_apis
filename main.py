@@ -181,7 +181,10 @@ class AstrbotPluginCustomize(Star):
                     response.raise_for_status()
                     content_type = response.headers.get("Content-Type", "").lower()
                     if "application/json" in content_type:
-                        return await response.json()
+                        try:
+                            return await response.json()
+                        except json.JSONDecodeError:
+                            return await response.text()
                     if "text/" in content_type:
                         return (await response.text()).strip()
                     return await response.read()
@@ -290,15 +293,18 @@ class AstrbotPluginCustomize(Star):
         if isinstance(data, dict) and target:
             data = self._get_nested_value(data, target)
 
-        bytes = None
-        if isinstance(data, str) and data_type != "text":
+        bytes_data = None
+        if isinstance(data, str) and data_type not in ("text", "image"):
+            # 只有video和audio最终返回URL
             data = self._extract_url(data)
-            if data: bytes = await self._make_request(data)
+            if data:
+                bytes_data = await self._make_request(data)
+                if bytes_data is None: return []
 
-        if bytes is None: return []
+        if data is None: return []
 
         if self.auto_save_data:
-            await self._save_data(bytes, api_name, data_type)
+            await self._save_data(bytes_data, api_name, data_type)
         
         return self._build_chain(data, data_type)
 
@@ -311,10 +317,10 @@ class AstrbotPluginCustomize(Star):
             if data_type == "image": return [Comp.Image.fromFileSystem(data)]
             if data_type == "video": return [Comp.Video.fromFileSystem(data)]
             if data_type == "audio": return [Comp.Record.fromFileSystem(data)]
-        elif isinstance(data, str):
-            if data_type == "image": return [Comp.Image.fromURL(data)]
-            if data_type == "video": return [Comp.Video.fromURL(data)]
-            if data_type == "audio": return [Comp.Record.fromURL(data)]
+        else:
+            if data_type == "image" and isinstance(data, bytes): return [Comp.Image.fromBytes(data)]
+            if data_type == "video" and isinstance(data, str): return [Comp.Video.fromURL(data)]
+            if data_type == "audio" and isinstance(data, str): return [Comp.Record.fromURL(data)]
         return []
 
     def _get_nested_value(self, result: dict, target: str) -> Any:
