@@ -52,5 +52,11 @@
         "type": "list",
         "default": [],
         "hint": "禁用列表内的关键词会被屏蔽，从而达到不能触发api的效果"
+    },
+    "timeout": {
+        "description": "API请求超时（秒）",
+        "type": "int",
+        "default": 5,
+        "hint": "设置调用API时的网络请求超时时间"
     }
 }

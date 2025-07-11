@@ -1,5 +1,5 @@
 name: astrbot_plugin_apis
-desc: API聚合插件，海量免费API动态添加
-version: 1.0.0
-author: Roo
+desc: API聚合插件，海量免费API动态添加，热门API：看看腿、看看腹肌...
+version: 1.0.7
+author: Zhalslar
 repo: https://github.com/Zhalslar/astrbot_plugin_apis

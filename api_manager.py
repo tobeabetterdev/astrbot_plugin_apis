@@ -1,93 +1,95 @@
 import json
-import os
-import httpx
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-class ApiManager:
-    def __init__(self, data_path: str):
-        self.data_path = data_path
-        self.api_data_file = os.path.join(self.data_path, 'api_data.json')
-        self.apis = self.load_apis()
+
+class APIManager:
+    """
+    API管理器，负责加载、添加、删除和获取API信息。
+    """
+
+    def __init__(self, api_file: Path):
+        """
+        初始化APIManager。
+
+        :param api_file: api_data.json 文件路径。
+        """
+        self.api_file = api_file
+        self.apis: Dict[str, Any] = self.load_apis()
+        self.apis_names: List[str] = list(self.apis.keys())
 
     def load_apis(self) -> Dict[str, Any]:
-        if not os.path.exists(self.api_data_file):
-            return {}
+        """
+        从 api_data.json 文件加载API数据。
+
+        :return: 包含API数据的字典。
+        """
         try:
-            with open(self.api_data_file, 'r', encoding='utf-8') as f:
+            with open(self.api_file, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
+        except FileNotFoundError:
+            # 文件不存在是正常情况，返回空字典
+            return {}
+        except json.JSONDecodeError as e:
+            # JSON格式错误是严重问题，需要记录日志
+            print(f"错误: api_data.json 文件格式错误，无法解析: {e}")
+            return {}
+        except Exception as e:
+            print(f"错误: 加载api_data.json时发生未知错误: {e}")
             return {}
 
-    def save_apis(self):
-        with open(self.api_data_file, 'w', encoding='utf-8') as f:
-            json.dump(self.apis, f, indent=4, ensure_ascii=False)
+    def save_apis(self) -> None:
+        """
+        将当前的API数据保存到 api_data.json 文件。
+        """
+        with open(self.api_file, "w", encoding="utf-8") as f:
+            json.dump(self.apis, f, ensure_ascii=False, indent=4)
 
-    def get_api(self, keyword: str) -> Optional[Dict[str, Any]]:
-        return self.apis.get(keyword)
+    def add_api(self, api_info: Dict[str, Any]) -> None:
+        """
+        添加或更新一个API。
 
-    def get_all_apis(self) -> Dict[str, Any]:
-        return self.apis
-
-    def add_api(self, keyword: str, api_info: Dict[str, Any]) -> bool:
-        if keyword in self.apis:
-            return False
-        self.apis[keyword] = api_info
-        self.save_apis()
-        return True
-
-    def remove_api(self, keyword: str) -> bool:
-        if keyword in self.apis:
-            del self.apis[keyword]
+        :param api_info: 包含API信息的字典。
+        """
+        api_name = api_info.get("name")
+        if api_name:
+            self.apis[api_name] = api_info
             self.save_apis()
-            return True
-        return False
+            self.apis_names = list(self.apis.keys())
 
-    async def call_api(self, keyword: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        api_info = self.get_api(keyword)
-        if not api_info:
-            return None
+    def remove_api(self, api_name: str) -> None:
+        """
+        根据API名称删除一个API。
 
-        api_url = api_info.get('url')
-        method = api_info.get('method', 'GET').upper()
-        req_params = api_info.get('params', {})
-        if params:
-            req_params.update(params)
+        :param api_name: 要删除的API的名称。
+        """
+        if api_name in self.apis:
+            del self.apis[api_name]
+            self.save_apis()
+            self.apis_names = list(self.apis.keys())
 
-        try:
-            async with httpx.AsyncClient() as client:
-                if method == 'GET':
-                    response = await client.get(api_url, params=req_params, follow_redirects=True)
-                elif method == 'POST':
-                    response = await client.post(api_url, json=req_params)
-                else:
-                    return None
-                
-                response.raise_for_status()
+    def get_api_info(self, api_name: str) -> Optional[Dict[str, Any]]:
+        """
+        根据API名称获取API的详细信息。
 
-                api_type = api_info.get('type')
-                if api_type in ['image', 'video', 'audio']:
-                    return response.content
-                
-                # Handle JSON response with a target field
-                if 'target' in api_info:
-                    try:
-                        json_data = response.json()
-                        target_keys = api_info['target'].split('.')
-                        data = json_data
-                        for key in target_keys:
-                            if isinstance(data, dict):
-                                data = data.get(key)
-                            elif isinstance(data, list) and key.isdigit():
-                                data = data[int(key)]
-                            else:
-                                data = None
-                                break
-                        return data
-                    except (json.JSONDecodeError, KeyError, IndexError):
-                        return response.text # Fallback to text
-                
-                return response.text
+        :param api_name: API的名称。
+        :return: 包含API信息的字典，如果未找到则返回None。
+        """
+        return self.apis.get(api_name)
 
-        except httpx.RequestError as e:
-            print(f"请求API {keyword} 出错: {e}")
-            return None
+    def get_apis_names(self) -> List[str]:
+        """
+        获取所有API的名称列表。
+
+        :return: 包含所有API名称的列表。
+        """
+        return self.apis_names
+
+    def check_duplicate_api(self, api_name: str) -> bool:
+        """
+        检查API名称是否存在。
+
+        :param api_name: 要检查的API名称。
+        :return: 如果存在则返回True，否则返回False。
+        """
+        return api_name in self.apis
