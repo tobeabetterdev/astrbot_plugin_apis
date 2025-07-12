@@ -19,18 +19,8 @@ from astrbot.core.message.components import BaseMessageComponent
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
 from data.plugins.astrbot_plugin_customize.api_manager import APIManager
-
-# 定义缓存路径
-DATA_PATH = Path("./data/plugins_data/astrbot_plugin_customize")
-DATA_PATH.mkdir(parents=True, exist_ok=True)
-
-# 定义子路径
-TYPE_DIRS = {
-    "text": DATA_PATH / "text",
-    "image": DATA_PATH / "image",
-    "video": DATA_PATH / "video",
-    "audio": DATA_PATH / "audio",
-}
+from data.plugins.astrbot_plugin_customize.data_manager import DataManager
+import data.plugins.astrbot_plugin_customize.utils as utils
 
 api_file = (
     Path(__file__).parent / "api_data.json"
@@ -40,7 +30,7 @@ api_file = (
 @register(
     "astrbot_plugin_customize",
     "tobeabetterdev",
-    "API聚合插件，定制化功能整合，个人用",
+    "[wechatpadpro]API聚合插件，定制化功能整合，个人用",
     "1.0.0",
     "https://github.com/tobeabetterdev/astrbot_plugin_customize",
 )
@@ -50,6 +40,7 @@ class AstrbotPluginCustomize(Star):
         self.load_config(config)
         self.API = APIManager(api_file=api_file)
         self.apis_names = self.API.get_apis_names()
+        self.data_manager = DataManager()
 
     def load_config(self, config: AstrBotConfig):
         self.wake_prefix: list[str] = self.context.get_config().get("wake_prefix", [])
@@ -115,7 +106,7 @@ class AstrbotPluginCustomize(Star):
             return
         
         try:
-            api_info = self._parse_api_input(input_str)
+            api_info = utils.parse_api_input(input_str)
             name = api_info.get("name")
 
             if not name or not api_info.get("url"):
@@ -136,33 +127,6 @@ class AstrbotPluginCustomize(Star):
                 logger.error(f"添加API失败: {e}")
             yield event.plain_result("添加失败，请检查格式。")
             
-    def _parse_api_input(self, input_str: str) -> Dict[str, Any]:
-        """从字符串解析API信息"""
-        info_map = {"名称": "name", "地址": "url", "类型": "type", "参数": "params", "解析路径": "target"}
-        api_info = {}
-        parts = re.split(r'\s*(名称|地址|类型|参数|解析路径)：', '名称：' + input_str)
-        
-        it = iter(parts[1:])
-        for key_zh in it:
-            key_en = info_map.get(key_zh)
-            value = next(it, "").strip()
-            if key_en == "params":
-                api_info[key_en] = self._parse_params_str(value)
-            elif value:
-                api_info[key_en] = value
-        return api_info
-
-    def _parse_params_str(self, params_str: str) -> dict:
-        """解析参数字符串为字典"""
-        params = {}
-        if params_str:
-            for pair in params_str.split(","):
-                key_value = pair.split("=", 1)
-                if len(key_value) == 2:
-                    params[key_value[0].strip()] = key_value[1].strip() or ""
-                else:
-                    params[key_value[0].strip()] = None
-        return params
 
     @filter.command("删除api")
     async def remove_api(self, event: AstrMessageEvent, api_name: str):
@@ -217,7 +181,7 @@ class AstrbotPluginCustomize(Star):
             chain = await self._process_api_data(data, api_name, api_data)
         else:
             logger.warning(f"API '{api_name}' 响应为空，尝试本地缓存。")
-            chain = await self._get_data(api_name, api_data.get("type"))
+            chain = await self.data_manager.get_data(api_name, api_data.get("type"))
 
         if chain:
             try:
@@ -291,107 +255,28 @@ class AstrbotPluginCustomize(Star):
         target = api_data.get("target")
 
         if isinstance(data, dict) and target:
-            data = self._get_nested_value(data, target)
+            data = utils.get_nested_value(data, target)
 
-        bytes_data = None
-        if isinstance(data, str) and data_type not in ("text", "image"):
-            # 只有video和audio最终返回URL
-            data = self._extract_url(data)
-            if data:
-                bytes_data = await self._make_request(data)
-                if bytes_data is None: return []
+        if data is None:
+            return []
 
-        if data is None: return []
+        if isinstance(data, str) and data_type != "text":
+            url = utils.extract_url(data)
+            if url:
+                bytes_data = await self._make_request(url)
+                if bytes_data is None:
+                    # 如果下载失败，尝试使用原始URL
+                    return self.data_manager.build_chain(api_data.get("url"), data_type)
+                if self.auto_save_data:
+                    await self.data_manager.save_data(bytes_data, api_name, data_type)
+                # 使用下载的数据构建消息链
+                return self.data_manager.build_chain(bytes_data, data_type)
+            else:
+                # 如果没有可提取的URL，则认为数据无效
+                return []
 
+        # 对于文本类型或非字符串的二进制数据
         if self.auto_save_data:
-            await self._save_data(bytes_data, api_name, data_type)
-        
-        return self._build_chain(data, data_type)
+            await self.data_manager.save_data(data, api_name, data_type)
 
-    def _build_chain(self, data: Any, data_type: str, from_local: bool = False) -> List[BaseMessageComponent]:
-        """构建消息链"""
-        if data_type == "text":
-            return [Comp.Plain(str(data))]
-        
-        if from_local: # 本地数据是路径
-            if data_type == "image": return [Comp.Image.fromFileSystem(data)]
-            if data_type == "video": return [Comp.Video.fromFileSystem(data)]
-            if data_type == "audio": return [Comp.Record.fromFileSystem(data)]
-        else:
-            if data_type == "image" and isinstance(data, bytes): return [Comp.Image.fromBytes(data)]
-            if data_type == "video" and isinstance(data, str): return [Comp.Video.fromURL(data)]
-            if data_type == "audio" and isinstance(data, str): return [Comp.Record.fromURL(data)]
-        return []
-
-    def _get_nested_value(self, result: dict, target: str) -> Any:
-        """安全地从嵌套字典中获取值"""
-        try:
-            keys = re.split(r'\.|(\[\d*\])', target)
-            keys = [k.strip("[]") for k in keys if k and k.strip()]
-            value = result
-            for key in keys:
-                if isinstance(value, list):
-                    value = random.choice(value) if key == "" else value[int(key)]
-                else:
-                    value = value.get(key)
-            return value
-        except (KeyError, IndexError, TypeError, ValueError):
-            return None
-
-    @staticmethod
-    def _extract_url(text: str) -> Optional[str]:
-        """从字符串中提取第一个有效URL"""
-        match = re.search(r"https?://[^\s\"']+", text.replace("\\", ""))
-        if match:
-            url = unquote(match.group(0).strip('"'))
-            if urlparse(url).scheme in {"http", "https"}: return url
-        return None
-
-    async def _save_data(self, data: Union[str, bytes], path_name: str, data_type: str):
-        """将数据保存到本地"""
-        TYPE_DIR = TYPE_DIRS.get(data_type)
-        if not TYPE_DIR: return
-        TYPE_DIR.mkdir(parents=True, exist_ok=True)
-
-        if data_type == "text":
-            json_path = TYPE_DIR / f"{path_name}.json"
-            try:
-                history = json.loads(json_path.read_text("utf-8")) if json_path.exists() else []
-            except json.JSONDecodeError:
-                history = []
-            
-            clean_text = str(data).replace("\r", "\n")
-            if clean_text not in history:
-                history.append(clean_text)
-                json_path.write_text(json.dumps(history, ensure_ascii=False, indent=4), "utf-8")
-        elif isinstance(data, bytes):
-            save_dir = TYPE_DIR / path_name
-            save_dir.mkdir(parents=True, exist_ok=True)
-            
-            file_hash = hashlib.md5(data).hexdigest()
-            extension = { "image": ".jpg", "audio": ".mp3", "video": ".mp4"}.get(data_type, ".dat")
-            save_path = save_dir / f"{file_hash}{extension}"
-            
-            if not save_path.exists():
-                save_path.write_bytes(data)
-
-    async def _get_data(self, path_name: str, data_type: str) -> Optional[List[BaseMessageComponent]]:
-        """从本地取出数据"""
-        TYPE_DIR = TYPE_DIRS.get(data_type)
-        if not TYPE_DIR: return None
-
-        if data_type == "text":
-            json_path = TYPE_DIR / f"{path_name}.json"
-            if json_path.exists():
-                try:
-                    history = json.loads(json_path.read_text("utf-8"))
-                    if history: return self._build_chain(random.choice(history), "text")
-                except (json.JSONDecodeError, IndexError):
-                    return None
-        else:
-            save_dir = TYPE_DIR / path_name
-            if save_dir.is_dir():
-                files = [f for f in save_dir.iterdir() if f.is_file()]
-                if files:
-                    return self._build_chain(str(random.choice(files)), data_type, from_local=True)
-        return None
+        return self.data_manager.build_chain(data, data_type)
