@@ -250,38 +250,52 @@ class AstrbotPluginCustomize(Star):
         return [event.get_sender_name()]
 
     async def _process_api_data(self, data: Any, api_name: str, api_data: dict) -> List[BaseMessageComponent]:
-        """处理API响应数据"""
+        """处理并构建API响应数据的消息链"""
         data_type = api_data.get("type")
         target = api_data.get("target")
 
+        # 1. 如果有target，从字典中提取数据
         if isinstance(data, dict) and target:
             data = utils.get_nested_value(data, target)
 
         if data is None:
             return []
 
-        if isinstance(data, str) and data_type != "text":
-            url = utils.extract_url(data)
-            if url:
-                bytes_data = await self._make_request(url)
-                if bytes_data is None:
-                    # 如果下载失败，尝试使用原始URL
-                    return self.data_manager.build_chain(api_data.get("url"), data_type)
-                
-                if self.auto_save_data:
-                    await self.data_manager.save_data(bytes_data, api_name, data_type)
+        # 2. 处理文本类型
+        if data_type == "text":
+            if self.auto_save_data:
+                await self.data_manager.save_data(data, api_name, data_type)
+            return self.data_manager.build_chain(data, data_type)
 
-                # 根据数据类型决定构建消息链的数据
-                if data_type == "image":
-                    return self.data_manager.build_chain(bytes_data, data_type)
-                else: # 对于视频/音频，使用URL构建
-                    return self.data_manager.build_chain(url, data_type)
-            else:
-                # 如果没有可提取的URL，则认为数据无效
-                return []
+        # 3. 处理非文本类型 (image, video, audio)
+        bytes_data = None
+        source_url = None
 
-        # 对于文本类型或非字符串的二进制数据
+        if isinstance(data, str):
+            source_url = utils.extract_url(data)
+            if not source_url:
+                return []  # 字符串中没有有效的URL
+            
+            bytes_data = await self._make_request(source_url)
+            if bytes_data is None:
+                # 下载失败，直接使用原始URL或API地址作为后备
+                return self.data_manager.build_chain(source_url, data_type)
+        
+        elif isinstance(data, bytes):
+            bytes_data = data
+        
+        else:
+            return [] # 无法处理的非文本数据类型
+
+        # 保存数据
         if self.auto_save_data:
-            await self.data_manager.save_data(data, api_name, data_type)
+            await self.data_manager.save_data(bytes_data, api_name, data_type)
 
-        return self.data_manager.build_chain(data, data_type)
+        # 构建消息链
+        if data_type == "image":
+            # 图片可以直接使用bytes
+            return self.data_manager.build_chain(bytes_data, data_type)
+        else:
+            # 视频/音频需要URL，优先使用响应中提取的URL
+            final_url = source_url or api_data.get("url")
+            return self.data_manager.build_chain(final_url, data_type)
