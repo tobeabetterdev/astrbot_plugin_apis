@@ -267,10 +267,15 @@ class AstrbotPluginCustomize(Star):
                 if bytes_data is None:
                     # 如果下载失败，尝试使用原始URL
                     return self.data_manager.build_chain(api_data.get("url"), data_type)
+                
                 if self.auto_save_data:
                     await self.data_manager.save_data(bytes_data, api_name, data_type)
-                # 使用下载的数据构建消息链
-                return self.data_manager.build_chain(bytes_data, data_type)
+
+                # 根据数据类型决定构建消息链的数据
+                if data_type == "image":
+                    return self.data_manager.build_chain(bytes_data, data_type)
+                else: # 对于视频/音频，使用URL构建
+                    return self.data_manager.build_chain(url, data_type)
             else:
                 # 如果没有可提取的URL，则认为数据无效
                 return []
